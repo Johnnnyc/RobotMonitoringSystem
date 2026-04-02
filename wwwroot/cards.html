@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人状态监测 - 卡片式</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* 顶部标题 */
+        .header {
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: url('img/top.7c76a0c3.png') no-repeat center top;
+            background-size: cover;
+            height: 100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 100;
+        }
+        
+        /* 左侧占位元素，确保标题居中 */
+        .header-left {
+            width: 200px; /* 与右侧信息区域宽度一致 */
+        }
+        
+        /* 标题区域 */
+        .header-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        /* 右侧信息区域 */
+        .header-info {
+            width: 200px;
+            text-align: right;
+            color: white;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        /* 标题样式 */
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
+            margin: 0;
+        }
+        
+        /* 主容器 */
+        .main-container {
+            padding: 20px;
+            margin-top: 100px;
+        }
+        
+        /* 卡片网格 */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* 机器人卡片 */
+        .robot-card {
+            background: rgba(52, 73, 94, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(52, 152, 219, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 卡片悬停效果 */
+        .robot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.5);
+            border-color: rgba(52, 152, 219, 0.8);
+        }
+        
+        /* 卡片标题 */
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        /* 数据项 */
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        /* 数据标签 */
+        .data-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* 数据值 */
+        .data-value {
+            font-weight: bold;
+            color: white;
+        }
+        
+        /* 状态指示器 */
+        .status-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        /* 状态颜色 */
+        .status-running {
+            background-color: #27ae60;
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.8);
+        }
+        
+        .status-standby {
+            background-color: #f39c12;
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.8);
+        }
+        
+        .status-stopped {
+            background-color: #95a5a6;
+            box-shadow: 0 0 10px rgba(149, 165, 166, 0.8);
+        }
+        
+        .status-error {
+            background-color: #e74c3c;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+        }
+        
+        /* 返回按钮 */
+        .back-button {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            background: rgba(52, 73, 94, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(52, 152, 219, 0.5);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 99;
+        }
+        
+        .back-button:hover {
+            background: rgba(52, 73, 94, 1);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .card-grid {
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(5, 1fr);
+            }
+        }
+        
+        @media (max-width: 800px) {
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(10, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题 -->
+    <div class="header">
+        <div class="header-left"></div>
+        <div class="header-center">
+            <h1 class="header-title">机器人状态监测</h1>
+        </div>
+        <div class="header-info">
+            <div id="current-time">2024-01-01 00:00:00</div>
+            <div id="system-status">系统正常运行</div>
+        </div>
+    </div>
+    
+    <!-- 返回按钮 -->
+    <button class="back-button" onclick="window.location.href='index.html'">返回3D视图</button>
+    
+    <!-- 主容器 -->
+    <div class="main-container">
+        <div class="card-grid" id="card-grid">
+            <!-- 卡片将通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <script>
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-CN');
+            document.getElementById('current-time').textContent = timeString;
+        }
+        
+        // 初始化更新时间
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+        
+        // 机器人数据
+        let robotData = [];
+        
+        // 从后端获取机器人状态数据
+        function fetchRobotData() {
+            // 添加超时处理，5秒超时
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            // 调用后端API获取机器人状态数据
+            fetch('/api/robot', { signal: controller.signal })
+                .then(response => {
+                    clearTimeout(timeoutId); // 清除超时计时器
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 处理数据，确保有电流电压时是运行状态
+                    robotData = data.map(item => {
+                        let status = getStatusKey(item.controlStatus);
+                        // 如果有电流或电压，且状态不是运行或故障，则设置为运行状态
+                        if ((item.weldingCurrent > 0 || item.weldingVoltage > 0) && status !== 'running' && status !== 'error') {
+                            status = 'running';
+                        }
+                        return {
+                            id: item.id,
+                            name: `机器人${item.id}`,
+                            status: status,
+                            voltage: item.weldingVoltage,
+                            current: item.weldingCurrent,
+                            speed: item.weldingSpeed,
+                            deviceId: item.deviceId
+                        };
+                    });
+                    generateRobotCards();
+                })
+                .catch(error => {
+                    console.error('获取机器人数据失败:', error);
+                    // 只使用真实数据，不使用模拟数据
+                    document.getElementById('system-status').textContent = '数据获取失败';
+                });
+        }
+        
+        // 获取状态键
+        function getStatusKey(status) {
+            const statusMap = {
+                0: 'stopped',
+                1: 'running',
+                2: 'error',
+                3: 'standby'
+            };
+            return statusMap[status] || 'stopped';
+        }
+        
+        // 生成机器人卡片
+        function generateRobotCards() {
+            const cardGrid = document.getElementById('card-grid');
+            cardGrid.innerHTML = '';
+            
+            robotData.forEach(robot => {
+                const card = document.createElement('div');
+                card.className = 'robot-card';
+                
+                // 状态指示器
+                const statusIndicator = document.createElement('div');
+                statusIndicator.className = `status-indicator status-${robot.status}`;
+                card.appendChild(statusIndicator);
+                
+                // 卡片内容
+                card.innerHTML += `
+                    <h3 class="card-title">${robot.name}</h3>
+                    <div class="data-item">
+                        <span class="data-label">设备编号:</span>
+                        <span class="data-value">${robot.deviceId}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">状态:</span>
+                        <span class="data-value">${getStatusText(robot.status)}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">焊接电压:</span>
+                        <span class="data-value">${robot.voltage.toFixed(1)} V</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">焊接电流:</span>
+                        <span class="data-value">${robot.current.toFixed(1)} A</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">焊接速度:</span>
+                        <span class="data-value">${robot.speed.toFixed(1)} cm/min</span>
+                    </div>
+                `;
+                
+                cardGrid.appendChild(card);
+            });
+        }
+        
+        // 获取状态文本
+        function getStatusText(status) {
+            switch(status) {
+                case 'running': return '运行中';
+                case 'standby': return '待机';
+                case 'stopped': return '停止';
+                case 'error': return '故障';
+                default: return '未知';
+            }
+        }
+        
+        // 数据更新
+        function updateRobotData() {
+            fetchRobotData();
+        }
+        
+        // 初始化
+        fetchRobotData();
+        
+        // 每2秒更新一次数据
+        setInterval(updateRobotData, 2000);
+    </script>
+</body>
+</html>

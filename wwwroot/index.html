@@ -362,6 +362,15 @@
     // 当前选中的机器人ID
     let selectedRobotId = null;
     
+    // 添加双击事件，双击任意位置跳转到卡片式页面
+    document.addEventListener('dblclick', function(event) {
+        // 检查点击的元素是否不是控制面板、统计面板或提示框
+        const target = event.target;
+        if (!target.closest('.control-panel') && !target.closest('#stats') && !target.closest('.tooltip')) {
+            window.location.href = 'cards.html';
+        }
+    });
+    
     // 初始化场景
     function init() {
         // 创建场景
