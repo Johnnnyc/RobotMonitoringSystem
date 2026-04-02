@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人数字孪生状态监测</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: url('img/homeBg.be0a5c12.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        /* 顶部标题 */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: url('img/top.7c76a0c3.png') no-repeat center top;
+            background-size: cover;
+            height: 100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 100;
+        }
+        
+        /* 左侧占位元素，确保标题居中 */
+        .header-left {
+            width: 200px; /* 与右侧信息区域宽度一致 */
+        }
+        
+        /* 标题区域 */
+        .header-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        /* 右侧信息区域 */
+        .header-info {
+            width: 200px;
+            text-align: right;
+            color: white;
+            font-family: 'Courier New', monospace;
+            text-shadow: 
+                0 0 5px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(0, 0, 0, 0.6),
+                0 0 15px rgba(0, 0, 0, 0.4);
+            margin-top: -10px; /* 往上调整10像素 */
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 
+                0 0 5px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(0, 0, 0, 0.6),
+                0 0 15px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* 时间和设计信息 */
+        .header-info {
+            text-align: right;
+            color: white;
+            font-family: 'Courier New', monospace;
+            text-shadow: 
+                0 0 5px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(0, 0, 0, 0.6),
+                0 0 15px rgba(0, 0, 0, 0.4);
+        }
+        
+        .current-time {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .design-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        #container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+        
+        #stats {
+            position: absolute;
+            top: 120px;
+            right: 10px;
+            background: rgba(52, 73, 94, 0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            border: 1px solid rgba(52, 152, 219, 0.5);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+            z-index: 10;
+        }
+        
+        #stats h4 {
+            margin-top: 0;
+            color: #3498db;
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .chart-options {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .chart-options label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        .chart-options select {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            border-radius: 3px;
+            padding: 3px 5px;
+            font-size: 12px;
+        }
+        
+        .chart-options select option {
+            background: #1a1a2e;
+            color: white;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 15px;
+            max-width: 600px;
+            min-width: 500px;
+            height: auto;
+        }
+        
+        .tooltip.show {
+            display: flex !important;
+        }
+        
+        .tooltip-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .tooltip-info h4 {
+            margin: 0 0 10px 0;
+        }
+        
+        .tooltip-info p {
+            margin: 0;
+            line-height: 1.3;
+        }
+        
+        /* 提示框中的图表容器 */
+        .tooltip-chart {
+            flex: 1;
+            min-width: 280px;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .tooltip-chart canvas {
+            width: 280px !important;
+            height: 180px !important;
+            margin: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 120px;
+            left: 10px;
+            background: rgba(52, 73, 94, 0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(52, 152, 219, 0.5);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+            width: 100px;
+            max-width: 100px;
+            z-index: 10;
+        }
+        
+        .control-panel h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #3498db;
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+            padding-bottom: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .control-panel button {
+            margin: 2px 0;
+            padding: 4px 6px;
+            font-size: 10px;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #00d4ff, #3a7bd5);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
+        }
+        
+        button:hover {
+            background: linear-gradient(45deg, #3a7bd5, #00d4ff);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题 -->
+    <div class="header">
+        <!-- 左侧占位元素，确保标题居中 -->
+        <div class="header-left"></div>
+        
+        <!-- 标题区域（居中） -->
+        <div class="header-center">
+            <h1>智能前副ROBOT监测系统V1.2</h1>
+        </div>
+        
+        <!-- 右侧信息区域 -->
+        <div class="header-info">
+            <div class="current-time" id="current-time"></div>
+            <div class="design-info"> Design: John</div>
+        </div>
+    </div>
+    
+    <div id="container"></div>
+    <div id="stats">
+        <h4>机器人状态监测</h4>
+        <p>运行中: <span style="color: #27ae60;">0</span></p>
+        <p>故障: <span style="color: #e74c3c;">0</span></p>
+        <p>待机: <span style="color: #f39c12;">0</span></p>
+        <p>停止: <span style="color: #95a5a6;">0</span></p>
+        <p>总数量: 0</p>
+        <p>成功连接: 0</p>
+        <div class="chart-options">
+            <label for="chart-data-type">图表显示:</label>
+            <select id="chart-data-type" onchange="setChartDataType(this.value)">
+                <option value="voltage">焊接电压</option>
+                <option value="current">焊接电流</option>
+                <option value="speed">焊接速度</option>
+            </select>
+        </div>
+    </div>
+    
+
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-info">
+            <h4>机器人信息</h4>
+            <p>暂无数据</p>
+        </div>
+        <div class="tooltip-chart">
+            <canvas id="tooltip-chart"></canvas>
+        </div>
+    </div>
+    <div class="control-panel">
+        <h3>控制面板</h3>
+        <button onclick="startDataUpdate()">开始采集</button>
+        <button onclick="stopDataUpdate()">停止采集</button>
+        <button onclick="resetCamera()">重置视角</button>
+        <button onclick="reloadGLBModel()" style="background: linear-gradient(45deg, #f39c12, #e74c3c);">🔄 重新加载 GLB 模型</button>
+    </div>
+
+    <!-- 引入 Three.js -->
+    <script src="js/libs/three.min.js"></script>
+    <!-- <script src="js/libs/dat.gui.min.js"></script> -->
+    <!-- 引入 Chart.js -->
+    <script src="js/libs/chart.umd.min.js"></script>
+    <script src="js/loaders/GLTFLoader.js"></script>
+    <script src="js/controls/OrbitControls.js"></script>
+    <script>
+        // 检查Chart.js是否加载成功
+        console.log('Chart.js loaded:', typeof Chart !== 'undefined');
+    </script>
+<script>
+    // 场景、相机、渲染器
+    let scene, camera, renderer, controls;
+    // 机器人网格对象
+    let robots = [];
+    // 数据更新定时器
+    let updateTimer;
+    // 机器人状态数据
+    let robotStatuses = [];
+    // 悬停的机器人
+    let hoveredRobot = null;
+    // 提示框
+    let tooltip = document.getElementById('tooltip');
+    // 存储每个机器人的更新定时器
+    const robotTooltipIntervals = {};
+    // 存储加载好的 GLB 模型，用于克隆
+    let loadedRobotModel = null;
+    // 模型加载状态
+    let modelLoading = false;
+    let modelLoaded = false;
+    // 控制是否使用 GLB 模型
+    let useGLBModel = true; // 默认使用 GLB 模型，如果加载失败则回退到代码生成的模型
+    // 图表相关变量
+    let currentChart = null; // 单个图表实例
+    let robotChartData = {}; // 存储每个机器人的图表数据
+    let currentChartDataType = 'voltage'; // 当前显示的图表数据类型: voltage, current, speed
+    const MAX_DATA_POINTS = 300; // 每个机器人最多存储300组数据
+    // 当前选中的机器人ID
+    let selectedRobotId = null;
+    
+    // 初始化场景
+    function init() {
+        // 创建场景
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        
+        // 创建相机
+        camera = new THREE.PerspectiveCamera(
+            60, // 减小视角，适合观察一排机器人
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 12, 40); // 提高高度，拉远距离，更好地观察一排机器人
+        camera.lookAt(0, 3, 0); // 看向机器人的中部
+        
+        // 创建渲染器
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // 添加轨道控制器，允许用户旋转、缩放和平移相机视角
+        // 使用正确的 OrbitControls 构造函数
+        if (typeof THREE.OrbitControls !== 'undefined') {
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // 启用阻尼效果，使旋转更平滑
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 5;
+            controls.maxDistance = 100;
+        } else {
+            console.error('THREE.OrbitControls is not available');
+        }
+        
+        // 添加光源
+        addLights();
+        
+        // 创建地面
+        createGround();
+        
+        // 创建机器人
+        createRobots();
+        
+        // 添加鼠标事件监听
+        addMouseListeners();
+        
+        // 开始动画循环
+        animate();
+        
+        // 开始数据更新
+        startDataUpdate();
+        
+        // 预加载 GLB 模型（如果启用）
+        if (useGLBModel) {
+            preloadRobotModel();
+        }
+    }
+    
+    // 添加光源
+    function addLights() {
+        // 环境光 - 增加亮度
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        // 方向光（模拟太阳光）
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        
+        // 添加第二个方向光，改善照明
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight2.position.set(-10, 10, -10);
+        scene.add(directionalLight2);
+        
+        // 点光源
+        const pointLight = new THREE.PointLight(0xffffff, 0.8, 100);
+        pointLight.position.set(0, 10, 0);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+    }
+    
+    // 创建地面（厂房形式）
+    function createGround() {
+        // 创建厂房地板（科技感灰色）
+        const groundSize = 80;
+        const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x2c3e50,
+            roughness: 0.7,
+            metalness: 0.3
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // 创建厂房墙壁
+        const wallMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x34495e,
+            roughness: 0.7,
+            metalness: 0.2
+        });
+        
+        // 四面墙壁
+        const wallThickness = 0.5;
+        const wallHeight = 8;
+        
+        // 后墙
+        const backWallGeometry = new THREE.BoxGeometry(groundSize, wallHeight, wallThickness);
+        const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+        backWall.position.set(0, wallHeight / 2, groundSize / 2 - wallThickness / 2);
+        backWall.receiveShadow = true;
+        scene.add(backWall);
+        
+        // 前墙
+        const frontWallGeometry = new THREE.BoxGeometry(groundSize, wallHeight, wallThickness);
+        const frontWall = new THREE.Mesh(frontWallGeometry, wallMaterial);
+        frontWall.position.set(0, wallHeight / 2, -groundSize / 2 + wallThickness / 2);
+        frontWall.receiveShadow = true;
+        scene.add(frontWall);
+        
+        // 左墙
+        const leftWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, groundSize);
+        const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+        leftWall.position.set(-groundSize / 2 + wallThickness / 2, wallHeight / 2, 0);
+        leftWall.receiveShadow = true;
+        scene.add(leftWall);
+        
+        // 右墙
+        const rightWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, groundSize);
+        const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+        rightWall.position.set(groundSize / 2 - wallThickness / 2, wallHeight / 2, 0);
+        rightWall.receiveShadow = true;
+        scene.add(rightWall);
+    }
+    
+    // 创建机器人
+    function createRobots() {
+        // 创建7个工作站，每个工作站2个机器人，共14个机器人
+        const positions = [];
+        const spacing = 10; // 机器人之间的间距（已加大）
+        const startX = -30; // 第一个机器人的x坐标（调整以保持居中）
+        
+        // 创建7个工作站，每个工作站2个机器人
+        for (let i = 0; i < 7; i++) {
+            // 每个工作站的两个机器人并排显示
+            for (let j = 0; j < 2; j++) {
+                positions.push({
+                    x: startX + i * spacing,
+                    y: 0, // 贴近地面
+                    z: -4 + j * 8  // 每个工作站的两个机器人在z轴上分开（增大间距）
+                });
+            }
+        }
+        
+        // 创建机器人模型
+        positions.forEach((pos, index) => {
+            const workstationIndex = Math.floor(index / 2) + 1;
+            const robotInWorkstation = (index % 2) + 1;
+            const robotId = index + 1;
+            
+            const robot = createRobotMesh(robotId, pos.x, pos.y, pos.z);
+            // 存储工作站信息，用于数据匹配
+            robot.userData.workstationIndex = workstationIndex;
+            robot.userData.robotInWorkstation = robotInWorkstation;
+            robots.push(robot);
+            scene.add(robot);
+        });
+    }
+    
+    // 预加载 GLB 机器人模型
+    function preloadRobotModel() {
+        console.log('开始加载 GLB 机器人模型...');
+        console.log('模型路径：/robot/robot1.glb');
+        
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+            '/robot/robot1.glb', // 使用正确的模型路径
+            function (gltf) {
+                loadedRobotModel = gltf.scene;
+                console.log('✅ GLB 机器人模型加载成功！');
+                console.log('模型信息:', loadedRobotModel);
+                
+                // 调整模型大小（放大 15 倍）
+                loadedRobotModel.scale.set(8, 8, 8);
+                
+                // 启用阴影
+                loadedRobotModel.traverse(function (child) {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
+                modelLoaded = true;
+                console.log('开始重新创建机器人...');
+                // 重新创建所有机器人
+                recreateRobots();
+            },
+            function (xhr) {
+                if (xhr.lengthComputable) {
+                    const percent = (xhr.loaded / xhr.total * 100).toFixed(2);
+                    console.log(`GLB 模型加载进度：${percent}%`);
+                }
+            },
+            function (error) {
+                console.error('❌ 加载 GLB 模型失败:', error);
+                console.error('错误详情:', error);
+            }
+        );
+    }
+    
+    // 创建单个机器人模型（只使用 GLB 模型）
+    function createRobotMesh(id, x, y, z) {
+        const group = new THREE.Group();
+        group.userData = { id: id, name: `Robot_${id}` };
+        
+        if (loadedRobotModel) {
+            // 使用 GLB 模型
+            const robotClone = loadedRobotModel.clone();
+            robotClone.position.set(0, 0.5, 0); // 调整 Y 轴位置，让机器人站在地面上
+            robotClone.rotation.set(0, Math.PI / 4, 0); // 初始旋转 45 度
+            group.add(robotClone);
+            
+            // 存储引用以便后续更新
+            group.userData.model = robotClone;
+            
+            console.log(`机器人 ${id} 使用 GLB 模型`);
+        } else {
+            console.warn(`机器人 ${id} 模型未加载，等待 GLB 模型加载完成`);
+        }
+        
+        // 设置整体位置
+        group.position.set(x, y, z);
+        
+        return group;
+    }
+    
+    // 重新创建所有机器人
+    function recreateRobots() {
+        // 移除现有机器人
+        robots.forEach(robot => {
+            scene.remove(robot);
+        });
+        robots = [];
+        
+        // 重新创建机器人
+        createRobots();
+    }
+    
+    // 重新加载 GLB 模型
+    function reloadGLBModel() {
+        console.log('🔄 手动触发重新加载 GLB 模型...');
+        console.log('当前 loadedRobotModel:', loadedRobotModel);
+        
+        // 清除缓存（如果有）
+        if (loadedRobotModel) {
+            console.log('清理旧模型...');
+            loadedRobotModel = null;
+        }
+        
+        // 重新加载
+        preloadRobotModel();
+    }
+    
+    // 更新状态消息
+    function updateStatusMessage(message) {
+        console.log(message);
+        
+        // 这里可以添加更复杂的UI更新逻辑，例如显示一个临时的消息框
+        // 或者更新状态栏中的消息
+    }
+    
+    // 添加鼠标事件监听
+    function addMouseListeners() {
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        window.addEventListener('mousemove', (event) => {
+            // 计算鼠标在标准化设备坐标中的位置
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // 更新射线投射器
+            raycaster.setFromCamera(mouse, camera);
+            
+            // 检测与机器人的相交
+            const intersects = raycaster.intersectObjects(robots, true);
+            
+            // 重置所有机器人的颜色
+            robots.forEach(robot => {
+                robot.traverse(child => {
+                    if (child instanceof THREE.Mesh && child.material) {
+                        if (child.material.color.getHex() === 0xffff00) {
+                            child.material.color.setHex(0x3498db); // 恢复原来的蓝色
+                        }
+                    }
+                });
+            });
+            
+            // 处理相交的机器人
+            if (intersects.length > 0) {
+                // 找到最接近的机器人
+                let closestRobot = null;
+                let closestDistance = Infinity;
+                
+                for (const intersect of intersects) {
+                    let robot = intersect.object;
+                    while (robot.parent && !robot.userData.id) {
+                        robot = robot.parent;
+                    }
+                    
+                    if (robot.userData.id && intersect.distance < closestDistance) {
+                        closestRobot = robot;
+                        closestDistance = intersect.distance;
+                    }
+                }
+                
+                if (closestRobot) {
+                    // 高亮显示机器人
+                    closestRobot.traverse(child => {
+                        if (child instanceof THREE.Mesh && child.material) {
+                            if (child.material.color.getHex() === 0x3498db) {
+                                child.material.color.setHex(0xffff00); // 改为黄色
+                            }
+                        }
+                    });
+                    
+                    // 更新悬停状态
+                    hoveredRobot = closestRobot;
+                    
+                    // 显示提示框
+                    showTooltip(closestRobot, event.clientX, event.clientY, robotTooltipIntervals);
+                }
+            } else {
+                // 没有相交的机器人
+                // 清除之前的悬停状态
+                if (hoveredRobot) {
+                    hideTooltip(hoveredRobot, robotTooltipIntervals);
+                }
+                hoveredRobot = null;
+            }
+        });
+    }
+    
+    // 显示提示框
+    function showTooltip(robot, clientX, clientY, robotTooltipIntervals) {
+        const tooltip = document.getElementById('tooltip');
+        const robotId = robot.userData.id;
+        const workstationIndex = robot.userData.workstationIndex;
+        const robotInWorkstation = robot.userData.robotInWorkstation;
+        
+        // 如果已有定时器，先清除
+        if (robotTooltipIntervals[robotId]) {
+            clearInterval(robotTooltipIntervals[robotId]);
+        }
+        
+        // 设置初始位置
+        tooltip.style.left = clientX + 10 + 'px';
+        tooltip.style.top = clientY + 10 + 'px';
+        tooltip.classList.add('show');
+        
+        // 创建一个内部函数来更新提示框内容
+        function updateTooltipContent() {
+            // 确保只有在正确的悬停状态下才更新
+            if (!hoveredRobot || hoveredRobot !== robot) {
+                clearInterval(robotTooltipIntervals[robotId]);
+                delete robotTooltipIntervals[robotId];
+                return;
+            }
+            
+            // 查找对应的机器人数据
+            let robotData = null;
+            const workstationNames = [
+                "焊装后幅OP10", "焊装后幅OP20", "焊装后幅OP30", "焊装后幅OP35",
+                "焊装后幅OP40", "焊装后幅OP50", "焊装后幅OP60", "焊装后幅OP70"
+            ];
+            
+            if (workstationIndex <= workstationNames.length) {
+                const workstationName = workstationNames[workstationIndex - 1];
+                robotData = robotStatuses.find(r => 
+                    r.name && r.name.includes(workstationName) && 
+                    r.name.includes(`机器人${robotInWorkstation}`)
+                );
+            }
+            
+            // 更新提示框内容
+            const tooltipInfo = tooltip.querySelector('.tooltip-info');
+            if (tooltipInfo) {
+                if (robotData) {
+                    // 更新现有内容，而不是完全重写
+                    tooltipInfo.innerHTML = `
+                        <h4>${robotData.name}</h4>
+                        <p>设备ID: ${robotData.deviceId}</p>
+                        <p>机器人编号: ${robotData.robotNumber}</p>
+                        <p>焊道编号: ${robotData.seamNumber}</p>
+                        <p>焊接电压: ${robotData.weldingVoltage} V</p>
+                        <p>焊接电流: ${robotData.weldingCurrent} A</p>
+                        <p>焊接速度: ${robotData.weldingSpeed} mm/s</p>
+                        <p>控制状态: ${getStatusText(robotData.controlStatus)}</p>
+                        <p>运行反馈: ${robotData.runFeedback === 0 ? '正常' : '异常'}</p>
+                        <p>采集时间: ${new Date(robotData.collectionTime).toLocaleString()}</p>
+                    `;
+                } else {
+                    // 更新现有内容
+                    tooltipInfo.innerHTML = `
+                        <h4>工作站${workstationIndex} 机器人${robotInWorkstation}</h4>
+                        <p>暂无数据</p>
+                    `;
+                }
+                
+                // 更新图表（使用固定的canvas元素）
+                updateTooltipChart(robotId, robotData);
+            }
+        }
+        
+        // 立即更新一次
+        updateTooltipContent();
+        
+        // 每500毫秒更新一次提示框内容（降低更新频率以减少闪烁）
+        robotTooltipIntervals[robotId] = setInterval(updateTooltipContent, 500);
+    }
+    
+    // 隐藏提示框
+    function hideTooltip(robot, robotTooltipIntervals) {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.classList.remove('show');
+        
+        // 清除对应机器人的定时器
+        if (robot && robotTooltipIntervals[robot.userData.id]) {
+            clearInterval(robotTooltipIntervals[robot.userData.id]);
+            delete robotTooltipIntervals[robot.userData.id];
+        }
+    }
+    
+    // 获取状态文本
+    function getStatusText(status) {
+        const statusMap = {
+            0: '停止',
+            1: '运行',
+            2: '故障',
+            3: '待机'
+        };
+        return statusMap[status] || '未知';
+    }
+    
+    // 获取状态颜色
+    function getStatusColor(status) {
+        const colorMap = {
+            0: 0x95a5a6, // 停止 - 灰色
+            1: 0x27ae60, // 运行 - 绿色
+            2: 0xe74c3c, // 故障 - 红色
+            3: 0xf39c12  // 待机 - 橙色
+        };
+        return colorMap[status] || 0x95a5a6;
+    }
+    
+    // 从后端获取机器人状态数据
+    function fetchRobotData() {
+        // 添加超时处理，5秒超时
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        // 调用后端API获取机器人状态数据（使用相对路径，自动匹配当前服务器地址和端口）
+        fetch('/api/robot', { signal: controller.signal })
+            .then(response => {
+                clearTimeout(timeoutId); // 清除超时计时器
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                robotStatuses = data;
+                updateRobotStatuses();
+            })
+            .catch(error => {
+                clearTimeout(timeoutId); // 清除超时计时器
+                console.error('Error fetching robot data:', error);
+                // 仅记录错误，不使用模拟数据
+            });
+    }
+    
+    // 更新机器人状态显示
+    function updateRobotStatuses() {
+        // 确保每个机器人都有自己的数据数组
+        robots.forEach(robot => {
+            const robotId = robot.userData.id;
+            
+            // 初始化机器人数据数组（如果不存在）
+            if (!robotChartData[robotId]) {
+                robotChartData[robotId] = {
+                    labels: [],
+                    voltageData: [],
+                    currentData: [],
+                    speedData: []
+                };
+            }
+            
+            // 查找对应的机器人数据
+            let robotData = null;
+            
+            // 首先尝试通过ID匹配
+            robotData = robotStatuses.find(r => r.id == robotId);
+            
+            // 如果没有找到，尝试通过工作站和机器人编号匹配
+            if (!robotData) {
+                const workstationIndex = robot.userData.workstationIndex;
+                const robotInWorkstation = robot.userData.robotInWorkstation;
+                
+                const workstationNames = [
+                    "焊装后幅OP10", "焊装后幅OP20", "焊装后幅OP30", "焊装后幅OP40", "焊装后幅OP50"
+                ];
+                
+                if (workstationIndex <= workstationNames.length) {
+                    const workstationName = workstationNames[workstationIndex - 1];
+                    robotData = robotStatuses.find(r => 
+                        r.name && r.name.includes(workstationName) && 
+                        r.name.includes(`机器人${robotInWorkstation}`)
+                    );
+                }
+            }
+            
+            // 根据是否有对应的数据来显示或隐藏机器人
+            if (robotData) {
+                robot.visible = true;
+                // 更新状态指示器颜色
+                const indicator = robot.userData.indicator;
+                if (indicator) {
+                    indicator.material.color.setHex(getStatusColor(robotData.controlStatus));
+                }
+                
+                // 更新机器人数据数组
+                updateRobotDataArray(robotId, robotData);
+            } else {
+                // 即使没有数据，也显示机器人（保持15个机器人都可见）
+                robot.visible = true;
+                // 更新状态指示器为灰色（停止状态）
+                const indicator = robot.userData.indicator;
+                if (indicator) {
+                    indicator.material.color.setHex(getStatusColor(0)); // 0表示停止
+                }
+            }
+        });
+        
+        // 更新统计信息
+        updateStats();
+    }
+    
+    // 更新机器人数据数组
+    function updateRobotDataArray(robotId, robotData) {
+        // 确保机器人数据数组存在
+        if (!robotChartData[robotId]) {
+            robotChartData[robotId] = {
+                labels: [],
+                voltageData: [],
+                currentData: [],
+                speedData: []
+            };
+        }
+        
+        // 添加新数据点
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString();
+        
+        // 使用真实数据
+        const voltage = parseFloat(robotData.weldingVoltage) || 0;
+        const current = parseFloat(robotData.weldingCurrent) || 0;
+        const speed = parseFloat(robotData.weldingSpeed) || 0;
+        
+        // 添加到历史数据
+        robotChartData[robotId].labels.push(timeLabel);
+        robotChartData[robotId].voltageData.push(voltage);
+        robotChartData[robotId].currentData.push(current);
+        robotChartData[robotId].speedData.push(speed);
+        
+        // 限制数据点数量为300
+        if (robotChartData[robotId].labels.length > MAX_DATA_POINTS) {
+            robotChartData[robotId].labels.shift();
+            robotChartData[robotId].voltageData.shift();
+            robotChartData[robotId].currentData.shift();
+            robotChartData[robotId].speedData.shift();
+        }
+    }
+    
+    // 更新统计信息
+    function updateStats() {
+        const statsElement = document.getElementById('stats');
+        const runningCount = robotStatuses.filter(r => r.controlStatus === 1).length;
+        const faultCount = robotStatuses.filter(r => r.controlStatus === 2).length;
+        const standbyCount = robotStatuses.filter(r => r.controlStatus === 3).length;
+        const stoppedCount = robotStatuses.filter(r => r.controlStatus === 0).length;
+        
+        // 保存当前选择的图表数据类型
+        let selectedDataType = currentChartDataType;
+        
+        statsElement.innerHTML = `
+            <h4>机器人状态统计</h4>
+            <p>运行中: <span style="color: #27ae60;">${runningCount}</span></p>
+            <p>故障: <span style="color: #e74c3c;">${faultCount}</span></p>
+            <p>待机: <span style="color: #f39c12;">${standbyCount}</span></p>
+            <p>停止: <span style="color: #95a5a6;">${stoppedCount}</span></p>
+            <p>总数量: ${robotStatuses.length}</p>
+            <p>成功连接: ${robotStatuses.length}</p>
+            <div class="chart-options">
+                <label for="chart-data-type">图表显示:</label>
+                <select id="chart-data-type" onfocus="pauseDataUpdate()" onchange="setChartDataType(this.value); resumeDataUpdate()">
+                    <option value="voltage" ${selectedDataType === 'voltage' ? 'selected' : ''}>焊接电压</option>
+                    <option value="current" ${selectedDataType === 'current' ? 'selected' : ''}>焊接电流</option>
+                    <option value="speed" ${selectedDataType === 'speed' ? 'selected' : ''}>焊接速度</option>
+                </select>
+            </div>
+        `;
+    }
+    
+    // 开始数据更新
+    function startDataUpdate() {
+        fetchRobotData();
+        updateTimer = setInterval(fetchRobotData, 500); // 每500ms更新一次，与后端采集频率匹配
+    }
+    
+    // 停止数据更新
+    function stopDataUpdate() {
+        if (updateTimer) {
+            clearInterval(updateTimer);
+            updateTimer = null;
+        }
+    }
+    
+    // 暂停数据更新（用于下拉框选择时）
+    function pauseDataUpdate() {
+        if (updateTimer) {
+            clearInterval(updateTimer);
+            updateTimer = null;
+            console.log('Data update paused');
+        }
+    }
+    
+    // 恢复数据更新（用于下拉框选择完成后）
+    function resumeDataUpdate() {
+        if (!updateTimer) {
+            updateTimer = setInterval(fetchRobotData, 500); // 每500ms更新一次，与后端采集频率匹配
+            console.log('Data update resumed');
+        }
+    }
+    
+    // 重置相机
+    function resetCamera() {
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 0, 0);
+        // 重置控制器
+        if (controls) {
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+    }
+    
+    // 设置图表显示的数据类型
+    function setChartDataType(dataType) {
+        currentChartDataType = dataType;
+        console.log('Chart data type set to:', dataType);
+        
+        // 如果当前有悬停的机器人，更新其图表
+        if (hoveredRobot) {
+            const robotId = hoveredRobot.userData.id;
+            // 找到对应的机器人数据
+            let robotData = null;
+            
+            // 首先尝试通过ID匹配
+            robotData = robotStatuses.find(r => r.id == robotId);
+            
+            // 如果没有找到，尝试通过工作站和机器人编号匹配
+            if (!robotData) {
+                const workstationIndex = hoveredRobot.userData.workstationIndex;
+                const robotInWorkstation = hoveredRobot.userData.robotInWorkstation;
+                
+                const workstationNames = [
+                    "焊装后幅OP10", "焊装后幅OP20", "焊装后幅OP30", "焊装后幅OP35",
+                    "焊装后幅OP40", "焊装后幅OP50", "焊装后幅OP60", "焊装后幅OP70"
+                ];
+                
+                if (workstationIndex <= workstationNames.length) {
+                    const workstationName = workstationNames[workstationIndex - 1];
+                    robotData = robotStatuses.find(r => 
+                        r.name && r.name.includes(workstationName) && 
+                        r.name.includes(`机器人${robotInWorkstation}`)
+                    );
+                }
+            }
+            
+            if (robotData) {
+                updateTooltipChart(robotId, robotData);
+            }
+        }
+    }
+    
+    // 更新提示框中的图表
+    function updateTooltipChart(robotId, robotData) {
+        // 获取图表画布（使用固定的 canvas 元素 ID）
+        const canvas = document.getElementById('tooltip-chart');
+        if (!canvas) {
+            console.error('Canvas element not found: tooltip-chart');
+            return;
+        }
+        
+        // 检查 Chart.js 是否可用
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded!');
+            canvas.innerHTML = '<div style="color: white; padding: 20px; text-align: center;">图表加载中...</div>';
+            return;
+        }
+        
+        console.log('Chart.js available:', typeof Chart !== 'undefined');
+        console.log('Updating chart for robot', robotId, 'data type:', currentChartDataType);
+        
+        // 确保 Canvas 有正确的尺寸
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error('Could not get 2D context from canvas');
+            return;
+        }
+        
+        // 确保为该机器人初始化历史数据
+        if (!robotChartData[robotId]) {
+            robotChartData[robotId] = {
+                labels: [],
+                voltageData: [],
+                currentData: [],
+                speedData: []
+            };
+        }
+        
+        // 如果有新数据，添加到历史数据
+        if (robotData) {
+            // 添加新数据点
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+            
+            // 使用真实数据
+            const voltage = parseFloat(robotData.weldingVoltage) || 0;
+            const current = parseFloat(robotData.weldingCurrent) || 0;
+            const speed = parseFloat(robotData.weldingSpeed) || 0;
+            
+            // 添加到历史数据
+            robotChartData[robotId].labels.push(timeLabel);
+            robotChartData[robotId].voltageData.push(voltage);
+            robotChartData[robotId].currentData.push(current);
+            robotChartData[robotId].speedData.push(speed);
+            
+            // 限制数据点数量为 300
+            if (robotChartData[robotId].labels.length > MAX_DATA_POINTS) {
+                robotChartData[robotId].labels.shift();
+                robotChartData[robotId].voltageData.shift();
+                robotChartData[robotId].currentData.shift();
+                robotChartData[robotId].speedData.shift();
+            }
+            
+            console.log('Data added for robot', robotId, {
+                time: timeLabel,
+                voltage: voltage,
+                current: current,
+                speed: speed,
+                totalPoints: robotChartData[robotId].labels.length
+            });
+        }
+        
+        // 创建或更新图表
+        try {
+            // 根据当前选择的数据类型创建数据集
+            let datasets = [];
+            let chartTitle = '';
+            
+            if (currentChartDataType === 'voltage') {
+                datasets = [{
+                    label: '焊接电压 (V)',
+                    data: robotChartData[robotId].voltageData,
+                    borderColor: 'rgba(0, 212, 255, 1)',
+                    backgroundColor: 'rgba(0, 212, 255, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 1,
+                    pointHoverRadius: 3,
+                    fill: true
+                }];
+                chartTitle = '焊接电压趋势';
+            } else if (currentChartDataType === 'current') {
+                datasets = [{
+                    label: '焊接电流 (A)',
+                    data: robotChartData[robotId].currentData,
+                    borderColor: 'rgba(46, 204, 113, 1)',
+                    backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 1,
+                    pointHoverRadius: 3,
+                    fill: true
+                }];
+                chartTitle = '焊接电流趋势';
+            } else if (currentChartDataType === 'speed') {
+                datasets = [{
+                    label: '焊接速度 (mm/s)',
+                    data: robotChartData[robotId].speedData,
+                    borderColor: 'rgba(255, 165, 0, 1)',
+                    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 1,
+                    pointHoverRadius: 3,
+                    fill: true
+                }];
+                chartTitle = '焊接速度趋势';
+            }
+            
+            // 如果图表实例不存在，创建新图表
+            if (!currentChart) {
+                console.log('Creating new chart for robot', robotId);
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: robotChartData[robotId].labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 0 // 禁用动画以提高性能
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: chartTitle,
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    font: {
+                                        size: 8
+                                    },
+                                    maxRotation: 0,
+                                    autoSkip: true,
+                                    maxTicksLimit: 10
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    font: {
+                                        size: 8
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('Chart created successfully for robot', robotId);
+            } else {
+                // 更新现有图表
+                console.log('Updating existing chart for robot', robotId);
+                currentChart.data.labels = robotChartData[robotId].labels;
+                currentChart.data.datasets = datasets;
+                
+                // 更新标题
+                if (currentChart.options.plugins && currentChart.options.plugins.title) {
+                    currentChart.options.plugins.title.text = chartTitle;
+                }
+                
+                currentChart.update('none'); // 使用'none'模式避免重绘闪烁
+                console.log('Chart updated successfully for robot', robotId);
+            }
+        } catch (error) {
+            console.error('Error creating/updating chart for robot', robotId, error);
+            canvas.innerHTML = '<div style="color: red; padding: 20px; text-align: center;">图表加载失败</div>';
+        }
+    }
+    
+    // 动画循环
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // 更新控制器
+        if (controls) {
+            controls.update();
+        }
+        
+        // 旋转机器人（如果模型加载成功）
+        robots.forEach(robot => {
+            // 只旋转整个机器人，而不是特定的头部，以适应不同的模型结构
+            try {
+                if (robot && robot.children && robot.children.length > 0) {
+                    // 尝试找到模型的主体部分并旋转
+                    const robotModel = robot.children[0];
+                    if (robotModel && robotModel.rotation) {
+                        robotModel.rotation.y += 0.01;
+                    }
+                }
+            } catch (error) {
+                console.log('Error in animation loop:', error);
+            }
+        });
+        
+        renderer.render(scene, camera);
+    }
+    
+    // 窗口大小调整事件
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // 更新当前时间
+    function updateCurrentTime() {
+        const now = new Date();
+        const timeString = now.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        document.getElementById('current-time').textContent = timeString;
+    }
+    
+    // 初始化
+    init();
+    
+    // 初始化时间显示
+    updateCurrentTime();
+    // 设置定时器每秒更新时间
+    setInterval(updateCurrentTime, 1000);
+</script>
+</body>
+</html>
